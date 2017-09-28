@@ -59,3 +59,113 @@ public class Bootstrap {
 		System.out.println("更新完毕！！！！");
 	}
 }
+
+
+
+
+
+
+import java.io.BufferedReader;  
+import java.io.BufferedWriter;  
+import java.io.File;  
+import java.io.FileInputStream;  
+import java.io.FileWriter;  
+import java.io.InputStream;  
+import java.io.InputStreamReader; 
+/**
+ * @author qiaojoe
+ *
+ */
+public class Modify {
+	
+		private static final String FILENAME = "pom.xml";
+	
+	 	private String path;  
+	    private final String target;  
+	    private final String newContent;  
+	  
+	    public Modify(String path, String target, String newContent) {  
+	        // 操作目录。从该目录开始。该文件目录下及其所有子目录的文件都将被替换。  
+	        this.path = path;  
+	        // target:需要被替换、改写的内容。  
+	        this.target = target;  
+	        // newContent:需要新写入的内容。  
+	        this.newContent = newContent;  
+	  
+	        operation();  
+	    }  
+	  
+	    private void operation() {  
+	        File file = new File(path);  
+	        opeationDirectory(file);  
+	    }  
+	  
+	    public void opeationDirectory(File dir) {  
+	  
+	        File[] files = dir.listFiles();  
+	        if (files == null) {
+	        	System.out.println("文件目录不存在。。。请查证后输入");
+	        	return;
+	        }
+	        for (int i = 0; i < files.length; i++) {  
+	            File f = files[i];  
+	            if (f.isDirectory())  
+	                // 如果是目录，则递归。  
+	                opeationDirectory(f); 
+	            
+	            if (f.isFile()) {
+	            	if (FILENAME.equals(f.getName())) {
+	            		 operationFile(f);  
+	            	}
+	            }
+	        }  
+	    }  
+	  
+	    public void operationFile(File file) {  
+	  
+	        try {  
+	            InputStream is = new FileInputStream(file);  
+	            BufferedReader reader = new BufferedReader(  
+	                    new InputStreamReader(is));  
+	  
+	            String filename = file.getName();  
+	            // tmpfile为缓存文件，代码运行完毕后此文件将重命名为源文件名字。  
+	            File tmpfile = new File(file.getParentFile().getAbsolutePath()  
+	                    + "\\" + filename + ".tmp");  
+	  
+	            BufferedWriter writer = new BufferedWriter(new FileWriter(tmpfile));  
+	  
+	            boolean flag = false;  
+	            String str = null;  
+	            while (true) {  
+	                str = reader.readLine();  
+	  
+	                if (str == null)  
+	                    break;  
+	  
+	                if (str.contains(target)) {  
+	                	String newStr = str.replaceAll(target, newContent);
+	                    writer.write(newStr + "\n");  
+	                    flag = true;  
+	                } else  
+	                    writer.write(str + "\n");  
+	            }  
+	  
+	            is.close();  
+	  
+	            writer.flush();  
+	            writer.close();  
+	  
+	            if (flag) {  
+	                file.delete();  
+	                tmpfile.renameTo(new File(file.getAbsolutePath()));  
+	            } else  
+	                tmpfile.delete();  
+	        } catch (Exception e) {  
+	            e.printStackTrace();  
+	        }  
+	    }  
+
+}
+
+
