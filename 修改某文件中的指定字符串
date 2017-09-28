@@ -1,0 +1,61 @@
+import java.util.Scanner;
+
+/**
+ * @author qiaojoe
+ *
+ */
+public class Bootstrap {
+	
+	static String targetStr;
+	static String newContent;
+	static String filePath;
+	
+	public static void main(String[] args) {
+		
+		boolean flag = true;
+		
+		while (flag) {
+			Scanner q;
+			String temp = "";
+			// 获取文件路径
+			while ("".equals(temp)) {
+				System.out.print("请输入需要修改文件的路径");
+				q = new Scanner(System.in);
+				temp = q.next();
+			}
+			filePath = temp;
+			temp = "";
+			// 替换的目标字符串
+			while ("".equals(temp)) {
+				System.out.print("请输入需要替换的字符串");
+				q = new Scanner(System.in);
+				temp = q.next();
+			}
+			targetStr = temp;
+			temp = "";
+			// 替换的目标字符串
+			while ("".equals(temp)) {
+				System.out.print("请输入需要替换的最终字符串");
+				q = new Scanner(System.in);
+				temp = q.next();
+			}
+			newContent = temp;
+			temp = "";
+			System.out.println("您输入的文件路径："+filePath);
+			System.out.println("您要替换的字符串："+targetStr);
+			System.out.println("替换后字符串："+newContent);
+			
+			while ("".equals(temp)) {
+				System.out.println("确认需要替换？Y/N");
+				q = new Scanner(System.in);
+				temp = q.next();
+			}
+			if ("Y".equals(temp) || "y".equals(temp)) {
+				flag = false;
+			}
+		}
+		System.out.println("开始更新。。。。。");
+		new Modify(filePath, targetStr,newContent);
+		System.out.println("更新完毕！！！！");
+	}
+}
