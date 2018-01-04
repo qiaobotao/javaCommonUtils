@@ -1,0 +1,21 @@
+public class SingletonContainer {
+
+    private static volatile SingletonContainer instance = null;
+
+    private Map<String, Object> contaniner = new ConcurrentHashMap<String, Object>();
+
+    public static SingletonContainer getInstance() {
+        if (instance == null) {
+            synchronized (SingletonContainer.class) {
+                if (instance == null) {
+                    instance = new SingletonContainer();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public Map<String, Object> getContaniner() {
+        return contaniner;
+    }
+}
