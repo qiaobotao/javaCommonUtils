@@ -1,0 +1,176 @@
+(1) 文件字节流
+对文件建立 java.io.BufferedInputStream ，每次调用 read() 方法时会接连取出文件中长度为 arraySize 的数据到 array 中。这种方法可行但是效率不高。
+
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+
+
+public class StreamFileReader {
+    private BufferedInputStream fileIn;
+    private long fileLength;
+    private int arraySize;
+    private byte[] array;
+
+    public StreamFileReader(String fileName, int arraySize) throws IOException {
+        this.fileIn = new BufferedInputStream(new FileInputStream(fileName), arraySize);
+        this.fileLength = fileIn.available();
+        this.arraySize = arraySize;
+    }
+
+    public int read() throws IOException {
+        byte[] tmpArray = new byte[arraySize];
+        int bytes = fileIn.read(tmpArray);// 暂存到字节数组中
+        if (bytes != -1) {
+            array = new byte[bytes];// 字节数组长度为已读取长度
+            System.arraycopy(tmpArray, 0, array, 0, bytes);// 复制已读取数据
+            return bytes;
+        }
+        return -1;
+    }
+
+    public void close() throws IOException {
+        fileIn.close();
+        array = null;
+    }
+
+    public byte[] getArray() {
+        return array;
+    }
+
+    public long getFileLength() {
+        return fileLength;
+    }
+
+    public static void main(String[] args) throws IOException {
+        StreamFileReader reader = new StreamFileReader("/home/zfh/movie.mkv", 65536);
+        long start = System.nanoTime();
+        while (reader.read() != -1) ;
+        long end = System.nanoTime();
+        reader.close();
+        System.out.println("StreamFileReader: " + (end - start));
+    }
+}
+
+(2) 文件通道
+对文件建立 java.nio.channels.FileChannel ，每次调用 read() 方法时会先将文件数据读取到分配的长度为 arraySize 的 java.nio.ByteBuffer 中，再从中将已经读取到的文件数据转化到 array 中。这种利用了NIO中的通道的方法，比传统的字节流读取文件是要快一些。
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+
+
+public class ChannelFileReader {
+    private FileInputStream fileIn;
+    private ByteBuffer byteBuf;
+    private long fileLength;
+    private int arraySize;
+    private byte[] array;
+
+    public ChannelFileReader(String fileName, int arraySize) throws IOException {
+        this.fileIn = new FileInputStream(fileName);
+        this.fileLength = fileIn.getChannel().size();
+        this.arraySize = arraySize;
+        this.byteBuf = ByteBuffer.allocate(arraySize);
+    }
+
+    public int read() throws IOException {
+        FileChannel fileChannel = fileIn.getChannel();
+        int bytes = fileChannel.read(byteBuf);// 读取到ByteBuffer中
+        if (bytes != -1) {
+            array = new byte[bytes];// 字节数组长度为已读取长度
+            byteBuf.flip();
+            byteBuf.get(array);// 从ByteBuffer中得到字节数组
+            byteBuf.clear();
+            return bytes;
+        }
+        return -1;
+    }
+
+    public void close() throws IOException {
+        fileIn.close();
+        array = null;
+    }
+
+    public byte[] getArray() {
+        return array;
+    }
+
+    public long getFileLength() {
+        return fileLength;
+    }
+
+    public static void main(String[] args) throws IOException {
+        ChannelFileReader reader = new ChannelFileReader("/home/zfh/movie.mkv", 65536);
+        long start = System.nanoTime();
+        while (reader.read() != -1) ;
+        long end = System.nanoTime();
+        reader.close();
+        System.out.println("ChannelFileReader: " + (end - start));
+    }
+}
+
+(3) 内存文件映射
+这种方法就是把文件的内容被映像到计算机虚拟内存的一块区域，从而可以直接操作内存当中的数据而无需每次都通过 I/O 去物理硬盘读取文件。这是由当前 java 态进入到操作系统内核态，由操作系统读取文件，再返回数据到当前 java 态的过程。这样就能大幅提高我们操作大文件的速度。
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+
+public class MappedFileReader {
+    private FileInputStream fileIn;
+    private MappedByteBuffer mappedBuf;
+    private long fileLength;
+    private int arraySize;
+    private byte[] array;
+
+    public MappedFileReader(String fileName, int arraySize) throws IOException {
+        this.fileIn = new FileInputStream(fileName);
+        FileChannel fileChannel = fileIn.getChannel();
+        this.fileLength = fileChannel.size();
+        this.mappedBuf = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileLength);
+        this.arraySize = arraySize;
+    }
+
+    public int read() throws IOException {
+        int limit = mappedBuf.limit();
+        int position = mappedBuf.position();
+        if (position == limit) {
+            return -1;
+        }
+        if (limit - position > arraySize) {
+            array = new byte[arraySize];
+            mappedBuf.get(array);
+            return arraySize;
+        } else {// 最后一次读取数据
+            array = new byte[limit - position];
+            mappedBuf.get(array);
+            return limit - position;
+        }
+    }
+
+    public void close() throws IOException {
+        fileIn.close();
+        array = null;
+    }
+
+    public byte[] getArray() {
+        return array;
+    }
+
+    public long getFileLength() {
+        return fileLength;
+    }
+
+    public static void main(String[] args) throws IOException {
+        MappedFileReader reader = new MappedFileReader("/home/zfh/movie.mkv", 65536);
+        long start = System.nanoTime();
+        while (reader.read() != -1);
+        long end = System.nanoTime();
+        reader.close();
+        System.out.println("MappedFileReader: " + (end - start));
+    }
+}
